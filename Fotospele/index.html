@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="lv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#1a1a1a">
+    <title>Cēsu Fotospēle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --safe-area-inset-top: env(safe-area-inset-top, 0px);
+            --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-area-inset-left: env(safe-area-inset-left, 0px);
+            --safe-area-inset-right: env(safe-area-inset-right, 0px);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: max(20px, var(--safe-area-inset-top)) max(20px, var(--safe-area-inset-right)) max(20px, var(--safe-area-inset-bottom)) max(20px, var(--safe-area-inset-left));
+            overscroll-behavior: contain;
+            touch-action: pan-y;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        header {
+            display: none;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            color: #FFC107;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            color: #b0b0b0;
+            font-weight: 400;
+        }
+
+        .progress-container {
+            background-color: #2a2a2a;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            color: #FFD54F;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #3a3a3a;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFC107, #FFD54F);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 0%;
+        }
+
+        .game-card {
+            margin-bottom: 20px;
+        }
+
+        .clue-container {
+            background: linear-gradient(135deg, #D84315 0%, #BF360C 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(216, 67, 21, 0.5);
+        }
+
+        .clue-label {
+            display: none;
+        }
+
+        .clue {
+            font-size: 1.5rem;
+            text-align: center;
+            color: #ffffff;
+            font-weight: 600;
+            line-height: 1.6;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .image-container {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 24px;
+            background-color: #1a1a1a;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .image-container::before {
+            content: '';
+            display: block;
+            padding-top: 100%; /* Larger 1:1 aspect ratio for bigger display */
+        }
+
+        .image-skeleton {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #2a2a2a 25%, #333 50%, #2a2a2a 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+        }
+
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .image-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .image-container img.loaded {
+            opacity: 1;
+        }
+
+        .zoom-hint {
+            display: none;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 140px;
+            min-height: 52px;
+            padding: 16px 28px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 600;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        button:focus-visible {
+            outline: 3px solid #FFC107;
+            outline-offset: 2px;
+        }
+
+        .btn-next {
+            background-color: #FFC107;
+            color: #1a1a1a;
+        }
+
+        .btn-next:hover {
+            background-color: #FFD54F;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.5);
+        }
+
+        .btn-next:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .btn-prev {
+            background-color: #555;
+            color: white;
+        }
+
+        .btn-prev:hover {
+            background-color: #666;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(85, 85, 85, 0.4);
+        }
+
+        .btn-prev:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .btn-prev:disabled {
+            background-color: #333;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Onboarding Screen */
+        .onboarding-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .onboarding-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .onboarding-content {
+            background-color: #2a2a2a;
+            border-radius: 20px;
+            padding: 40px 30px;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+        }
+
+        .onboarding-content h2 {
+            font-size: 2rem;
+            color: #FFC107;
+            margin-bottom: 20px;
+        }
+
+        .onboarding-content p {
+            font-size: 1.1rem;
+            color: #e0e0e0;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .onboarding-features {
+            text-align: left;
+            margin: 30px 0;
+            padding: 0 20px;
+        }
+
+        .onboarding-features li {
+            margin-bottom: 12px;
+            font-size: 1rem;
+            color: #b0b0b0;
+        }
+
+        .btn-start {
+            background-color: #FFC107;
+            color: #1a1a1a;
+            padding: 16px 48px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            min-height: 52px;
+        }
+
+        .btn-start:hover {
+            background-color: #FFD54F;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 193, 7, 0.5);
+        }
+
+        .btn-start:active {
+            transform: scale(0.98);
+        }
+
+        /* Zoom Modal */
+        .zoom-modal {
+            display: none;
+        }
+
+        /* Completion Screen */
+        .completion-card {
+            display: none;
+            text-align: center;
+            padding: 40px 20px;
+            position: relative;
+        }
+
+        .completion-card.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .completion-card h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #FFC107;
+            animation: bounce 0.6s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .completion-card p {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            color: #b0b0b0;
+        }
+
+        .completion-stats {
+            background-color: #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: inline-block;
+        }
+
+        .completion-stats div {
+            margin: 10px 0;
+            font-size: 1.1rem;
+            color: #e0e0e0;
+        }
+
+        .btn-restart, .btn-share {
+            background-color: #FFC107;
+            color: #1a1a1a;
+            padding: 16px 40px;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 10px;
+            min-height: 52px;
+        }
+
+        .btn-restart:hover, .btn-share:hover {
+            background-color: #FFD54F;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 193, 7, 0.5);
+        }
+
+        .btn-restart:active, .btn-share:active {
+            transform: scale(0.98);
+        }
+
+        .btn-share {
+            display: none;
+        }
+
+        /* Confetti */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background-color: #FFC107;
+            position: absolute;
+            animation: confetti-fall 3s linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Swipe Indicator */
+        .swipe-indicator {
+            text-align: center;
+            padding: 12px;
+            font-size: 0.85rem;
+            color: #888;
+            opacity: 0;
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+
+        /* Landscape mode */
+        @media (orientation: landscape) and (max-height: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .image-container {
+                margin-bottom: 16px;
+            }
+
+            .clue-container {
+                padding: 16px;
+                margin-bottom: 16px;
+            }
+
+            .clue {
+                font-size: 1.2rem;
+            }
+
+            button {
+                min-height: 44px;
+                padding: 12px 20px;
+            }
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .clue {
+                font-size: 1.3rem;
+            }
+
+            button {
+                min-width: 120px;
+                font-size: 0.95rem;
+            }
+
+            .onboarding-content {
+                padding: 30px 20px;
+            }
+
+            .onboarding-content h2 {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Onboarding Overlay -->
+    <div class="onboarding-overlay" id="onboarding">
+        <div class="onboarding-content">
+            <h2>🏰 Laipni lūgti Narvaišu Cēsu fotospēlē!</h2>
+            <p>Tavs uzdevums ir atrast 46 vietas Cēsīs pareizajā secībā.</p>
+            <ul class="onboarding-features">
+                <li>📍 Izmanto norādījumus, lai atrastu vietas</li>
+                <li>📸 Apskaties attēlus un iepazīsti skaistās Cēsis</li>
+                <li>👈👉 Velc pa labi/kreisi, lai pārslēgtu</li>
+                <li>💾 Tavs progress tiek saglabāts automātiski</li>
+            </ul>
+            <button class="btn-start" onclick="startGame()" aria-label="Sākt spēli">Sākt piedzīvojumu! 🚀</button>
+        </div>
+    </div>
+
+    <!-- Zoom Modal -->
+    <div class="zoom-modal" id="zoom-modal" onclick="closeZoom()">
+        <button class="zoom-close" onclick="closeZoom()" aria-label="Aizvērt pietuvināto attēlu">✕</button>
+        <img id="zoom-image" src="" alt="Pietuvināts attēls">
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>🏰 Cēsu Fotospēle</h1>
+            <p class="subtitle">Atrodi vietas pareizajā secībā!</p>
+        </header>
+
+        <div class="progress-container">
+            <div class="progress-text" role="status" aria-live="polite">
+                <span id="current-number">1</span> / <span id="total-number">46</span>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="46">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="game-card" id="game-card">
+            <div class="clue-container">
+                <div class="clue-label">📍 Tavs norādījums</div>
+                <div class="clue" id="clue" role="heading" aria-level="2"></div>
+            </div>
+            <div class="image-container" id="image-container">
+                <div class="image-skeleton" id="image-skeleton"></div>
+                <img id="photo" src="" alt="" loading="eager">
+            </div>
+            <div class="swipe-indicator">👈 Velc pa labi vai kreisi 👉</div>
+            <div class="button-container">
+                <button class="btn-prev" id="btn-prev" onclick="prevPhoto()" aria-label="Iepriekšējais attēls">← Iepriekšējā</button>
+                <button class="btn-next" id="btn-next" onclick="nextPhoto()" aria-label="Nākamais attēls">Nākamā →</button>
+            </div>
+        </div>
+
+        <div class="completion-card" id="completion-card">
+            <h2>🎉 Apsveicu!</h2>
+            <p>Tu esi atradis visas 46 vietas Cēsīs!</p>
+            <div class="completion-stats">
+                <div>📸 Apskati: <strong>46 vietas</strong></div>
+                <div id="completion-time"></div>
+            </div>
+            <div>
+                <button class="btn-share" onclick="shareResults()" aria-label="Dalīties ar rezultātiem">📤 Dalīties</button>
+                <button class="btn-restart" onclick="restart()" aria-label="Sākt no jauna">🔄 Spēlēt vēlreiz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const photos = [
+            { id: 1, clue: "Festivāla iela pa ceļam uz parku", file: "IMG_1.jpeg" },
+            { id: 2, clue: "Logā mazs brīnumiņš", file: "IMG_2.jpeg" },
+            { id: 3, clue: "Laternas pie parka spīgo", file: "IMG_3.jpeg" },
+            { id: 4, clue: "Jaunās pastaigu takas", file: "IMG_4.jpeg" },
+            { id: 5, clue: "Aiz uzraksta paslēpies dīķis", file: "IMG_5.jpeg" },
+            { id: 6, clue: "Paskaties uz augšu!", file: "IMG_6.jpeg" },
+            { id: 7, clue: "Es esmu kalnā!", file: "IMG_7.jpeg" },
+            { id: 8, clue: "Ej uz priekšu, skaties, kur spīd!", file: "IMG_8.jpeg" },
+            { id: 9, clue: "Pa kalnu lejā, tumsā ir vēl viena baznīca", file: "IMG_9.jpeg" },
+            { id: 10, clue: "Kur daudzi ceļi satiekas, ir svecītes", file: "IMG_10.jpeg" },
+            { id: 11, clue: "Strūklaka", file: "IMG_11.jpeg" },
+            { id: 12, clue: "No strūklakas pa kreisi, vai tālumā redzi?", file: "IMG_12.jpeg" },
+            { id: 13, clue: "Uz kuru pusi jāiet uz baznīcu?", file: "IMG_13.jpeg" },
+            { id: 14, clue: "Viena liela eglīte un daudzas mazas", file: "IMG_14.jpeg" },
+            { id: 15, clue: "Ziemassvētku vecīša namiņš", file: "IMG_15.jpeg" },
+            { id: 16, clue: "Kas te? Šķība māja!", file: "IMG_16.jpeg" },
+            { id: 17, clue: "Augstāk nekā Pēterbaznīcas tornis", file: "IMG_17.jpeg" },
+            { id: 18, clue: "Jaunākā māja Cēsīs?", file: "IMG_18.jpeg" },
+            { id: 19, clue: "Vai vari mani ieraudzīt virs jumtiem?", file: "IMG_19.jpeg" },
+            { id: 20, clue: "Atrodi mani pie baznīcas!", file: "IMG_20.jpeg" },
+            { id: 21, clue: "Caur pagalmu uz Vanadziņu", file: "IMG_21.jpeg" },
+            { id: 22, clue: "Atrodi rūķus skatlogā", file: "IMG_22.jpeg" },
+            { id: 23, clue: "Cits krustojums, citas svecītes", file: "IMG_23.jpeg" },
+            { id: 24, clue: "Kur dāvanas uzkāpušas?", file: "IMG_24.jpeg" },
+            { id: 25, clue: "Laižam uz ziemeļpolu", file: "IMG_25.jpeg" },
+            { id: 26, clue: "Kur rūķis paslēpies?", file: "IMG_26.jpeg" },
+            { id: 27, clue: "Atrodi eglītes!", file: "IMG_27.jpeg" },
+            { id: 28, clue: "Vai šī ir vieslielākā eglīte?", file: "IMG_28.jpeg" },
+            { id: 29, clue: "Ejam pa aleju", file: "IMG_29.jpeg" },
+            { id: 30, clue: "Pirms leģendārā uzraksta ejam pa labi", file: "IMG_30.jpeg" },
+            { id: 31, clue: "Kur ir Cēsu kino?", file: "IMG_31.jpeg" },
+            { id: 32, clue: "Vai te dzīvo troļļi?", file: "IMG_32.jpeg" },
+            { id: 33, clue: "Pa lampiņu apspīdēto ielu uz stacijas pusi", file: "IMG_33.jpeg" },
+            { id: 34, clue: "Kurš pamanīs mani?", file: "IMG_34.jpeg" },
+            { id: 35, clue: "Es esmu tepat, aiz stūra", file: "IMG_35.jpeg" },
+            { id: 36, clue: "Kurā logā ir dāvanas?", file: "IMG_36.jpeg" },
+            { id: 37, clue: "Man blakus ir bibliotēka", file: "IMG_37.jpeg" },
+            { id: 38, clue: "Vai šī ir garākā eglīte?", file: "IMG_38.jpeg" },
+            { id: 39, clue: "Pa ceļam uz stadiona pusi", file: "IMG_39.jpeg" },
+            { id: 40, clue: "Paskaties uz augšu!", file: "IMG_40.jpeg" },
+            { id: 41, clue: "Es esmu maza atpūtas vieta tepat blakus", file: "IMG_41.jpeg" },
+            { id: 42, clue: "Kas tas par lāci ar motorzāģi?", file: "IMG_42.jpeg" },
+            { id: 43, clue: "Kurā stāvā ir šī eglīte? Uz Dzintara ielas.", file: "IMG_43.jpeg" },
+            { id: 44, clue: "Rūķi, uz augšu!", file: "IMG_44.jpeg" },
+            { id: 45, clue: "Lampiņa pie lampiņas uz Festivāla ielas", file: "IMG_45.jpeg" },
+            { id: 46, clue: "Kaut kur redzēta māja", file: "IMG_46.jpeg" }
+        ];
+
+        let currentIndex = 0;
+        let touchStartX = 0;
+        let touchEndX = 0;
+        let startTime = null;
+
+        // Check if user has seen onboarding
+        function checkOnboarding() {
+            const hasSeenOnboarding = localStorage.getItem('cesis-game-onboarding');
+            if (!hasSeenOnboarding) {
+                document.getElementById('onboarding').classList.add('active');
+            } else {
+                loadProgress();
+            }
+        }
+
+        function startGame() {
+            localStorage.setItem('cesis-game-onboarding', 'true');
+            document.getElementById('onboarding').classList.remove('active');
+            loadProgress();
+            if (!startTime) {
+                startTime = Date.now();
+            }
+        }
+
+        // LocalStorage - Save and Load Progress
+        function saveProgress() {
+            localStorage.setItem('cesis-game-progress', currentIndex);
+            if (!startTime) {
+                startTime = Date.now();
+            }
+            localStorage.setItem('cesis-game-start-time', startTime);
+        }
+
+        function loadProgress() {
+            const savedProgress = localStorage.getItem('cesis-game-progress');
+            const savedStartTime = localStorage.getItem('cesis-game-start-time');
+
+            if (savedProgress !== null) {
+                currentIndex = parseInt(savedProgress);
+            }
+            if (savedStartTime !== null) {
+                startTime = parseInt(savedStartTime);
+            } else {
+                startTime = Date.now();
+            }
+
+            updateDisplay();
+        }
+
+        // Preload next image for smoother experience
+        function preloadNextImage() {
+            if (currentIndex < photos.length - 1) {
+                const nextImg = new Image();
+                nextImg.src = 'images/' + photos[currentIndex + 1].file;
+            }
+        }
+
+        function updateDisplay() {
+            const photo = photos[currentIndex];
+            const photoElement = document.getElementById('photo');
+            const skeleton = document.getElementById('image-skeleton');
+
+            // Show skeleton
+            skeleton.style.display = 'block';
+            photoElement.classList.remove('loaded');
+
+            // Update clue
+            document.getElementById('clue').textContent = photo.clue;
+
+            // Update image with loading state
+            photoElement.src = 'images/' + photo.file;
+            photoElement.alt = `Vieta ${currentIndex + 1}: ${photo.clue}`;
+
+            photoElement.onload = function() {
+                skeleton.style.display = 'none';
+                photoElement.classList.add('loaded');
+                preloadNextImage();
+            };
+
+            // Update progress
+            document.getElementById('current-number').textContent = currentIndex + 1;
+            document.getElementById('total-number').textContent = photos.length;
+
+            const progressBar = document.querySelector('.progress-bar');
+            progressBar.setAttribute('aria-valuenow', currentIndex + 1);
+
+            const progressPercent = ((currentIndex + 1) / photos.length) * 100;
+            document.getElementById('progress-fill').style.width = progressPercent + '%';
+
+            // Update buttons
+            document.getElementById('btn-prev').disabled = currentIndex === 0;
+
+            if (currentIndex === photos.length - 1) {
+                document.getElementById('btn-next').textContent = 'Pabeigt ✓';
+            } else {
+                document.getElementById('btn-next').textContent = 'Nākamā →';
+            }
+
+            saveProgress();
+        }
+
+        function nextPhoto() {
+            if (currentIndex < photos.length - 1) {
+                currentIndex++;
+                updateDisplay();
+            } else {
+                completeGame();
+            }
+        }
+
+        function prevPhoto() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateDisplay();
+            }
+        }
+
+        function completeGame() {
+            document.getElementById('game-card').style.display = 'none';
+            document.getElementById('completion-card').classList.add('active');
+
+            // Calculate time taken
+            const endTime = Date.now();
+            const timeTaken = Math.floor((endTime - startTime) / 1000 / 60); // minutes
+            document.getElementById('completion-time').innerHTML = `⏱️ Laiks: <strong>${timeTaken} minūtes</strong>`;
+
+            // Trigger confetti
+            createConfetti();
+        }
+
+        function createConfetti() {
+            const colors = ['#FFC107', '#FFD54F', '#FF9800', '#FFA726', '#FFEB3B'];
+            const confettiCount = 50;
+
+            for (let i = 0; i < confettiCount; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    confetti.style.animationDuration = (Math.random() * 2 + 2) + 's';
+                    document.body.appendChild(confetti);
+
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 30);
+            }
+        }
+
+        function restart() {
+            currentIndex = 0;
+            startTime = Date.now();
+            localStorage.setItem('cesis-game-start-time', startTime);
+            document.getElementById('game-card').style.display = 'block';
+            document.getElementById('completion-card').classList.remove('active');
+            updateDisplay();
+        }
+
+        function shareResults() {
+            const text = '🏰 Es tikko pabeidzu Cēsu fotospēli un atradu visas 46 vietas! Pamēģini arī! 🎉';
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Cēsu Fotospēle',
+                    text: text
+                }).catch(() => {});
+            } else {
+                // Fallback - copy to clipboard
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Teksts nokopēts starpliktuvē!');
+                });
+            }
+        }
+
+        // Zoom functionality
+        function openZoom() {
+            const currentPhoto = photos[currentIndex];
+            document.getElementById('zoom-image').src = 'images/' + currentPhoto.file;
+            document.getElementById('zoom-modal').classList.add('active');
+        }
+
+        function closeZoom() {
+            document.getElementById('zoom-modal').classList.remove('active');
+        }
+
+        // Swipe gesture support
+        const imageContainer = document.getElementById('image-container');
+
+        imageContainer.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        imageContainer.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            const swipeThreshold = 50;
+            const diff = touchStartX - touchEndX;
+
+            if (Math.abs(diff) > swipeThreshold) {
+                if (diff > 0) {
+                    // Swiped left - next photo
+                    nextPhoto();
+                } else {
+                    // Swiped right - previous photo
+                    prevPhoto();
+                }
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') {
+                nextPhoto();
+            } else if (e.key === 'ArrowLeft') {
+                prevPhoto();
+            } else if (e.key === 'Escape') {
+                closeZoom();
+            }
+        });
+
+        // Initialize
+        checkOnboarding();
+    </script>
+</body>
+</html>
